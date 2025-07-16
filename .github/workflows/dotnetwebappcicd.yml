@@ -14,7 +14,7 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: dotnetwebapp
+        ref: https://github.com/imran-hg/dotnetwebapp.git
 
     - name: List repository files
       run: ls -la
