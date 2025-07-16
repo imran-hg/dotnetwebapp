@@ -1,62 +1,50 @@
 name: .NET MVC CI/CD Pipeline
-
-on:
+'on':
   push:
-    branches: [ main ]  # Changed from dotnetwebapp to main
-
+    branches:
+      - main
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      DOTNET_VERSION: '7.0.x'  # Update to your .NET version
-      
+      DOTNET_VERSION: 7.0.x
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      with:
-        # Using simple branch name
-        ref: main
-        # Ensure clean state
-        clean: true
-        # Minimal fetch depth
-        fetch-depth: 1
-        # Explicit repository URL
-        repository: 'https://github.com/imran-hg/dotnetwebapp.git'
-        # Use GitHub token for authentication
-        token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          clean: true
+          fetch-depth: 1
+          repository: 'https://github.com/imran-hg/dotnetwebapp.git'
+          token: '${{ secrets.GITHUB_TOKEN }}'
+      - name: Verify repository content
+        run: |
+          echo "Current branch: $(git branch --show-current)"
+          echo "Repository contents:"
+          ls -la
+          echo "Git status:"
+          git status
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '${{ env.DOTNET_VERSION }}'
+      - name: Restore dependencies
+        run: dotnet restore
+      - name: Build solution
+        run: dotnet build --configuration Release --no-restore
+      - name: Run tests
+        run: >
+          # Find and run test projects
 
-    - name: Verify repository content
-      run: |
-        echo "Current branch: $(git branch --show-current)"
-        echo "Repository contents:"
-        ls -la
-        echo "Git status:"
-        git status
-
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v4
-      with:
-        dotnet-version: ${{ env.DOTNET_VERSION }}
-
-    - name: Restore dependencies
-      run: dotnet restore
-
-    - name: Build solution
-      run: dotnet build --configuration Release --no-restore
-
-    - name: Run tests
-      run: |
-        # Find and run test projects
-        find . -name "*Tests.csproj" -exec dotnet test {} --no-build --configuration Release \;
-
-    - name: Publish application
-      run: |
-        # Publish the main project
-        dotnet publish -c Release -o ./publish_output
-
-    - name: Upload build artifacts
-      uses: actions/upload-artifact@v4
-      with:
-        name: mvc-artifacts
-        path: ./publish_output
-        retention-days: 1
+          find . -name "*Tests.csproj" -exec dotnet test {} --no-build
+          --configuration Release \;
+      - name: Publish application
+        run: |
+          # Publish the main project
+          dotnet publish -c Release -o ./publish_output
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: mvc-artifacts
+          path: ./publish_output
+          retention-days: 1
