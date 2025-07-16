@@ -1,0 +1,76 @@
+name: .NET CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '6.0'
+  PROJECT_NAME: 'dotnetwebapp'
+  DEPLOY_PATH: '/var/www/html/dotnetwebapp'
+  SSH_USER: 'deploy'
+  DEPLOY_SERVER: '3.75.99.5'
+  LOCAL_PUBLISH_DIR: './publish'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+      
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v2
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+        
+    - name: Restore dependencies
+      run: dotnet restore
+      
+    - name: Build
+      run: dotnet build --configuration Release --no-restore
+      
+    - name: Publish
+      run: dotnet publish --configuration Release --no-build --output ${{ env.LOCAL_PUBLISH_DIR }}
+      
+    - name: Wait for approval
+      uses: trstringer/manual-approval@v1
+      with:
+        secret: ${{ github.token }}
+        approvers: 'imran-hg'  # Replace with your GitHub username or team
+        instructions: 'Do you approve deployment to production?'
+        
+    - name: Deploy to Server
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        # Stop existing application and clean deploy path
+        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USER }}@${{ env.DEPLOY_SERVER }} "
+          pkill -f 'dotnet ${{ env.PROJECT_NAME }}.dll' || true
+          rm -rf ${{ env.DEPLOY_PATH }}/*
+        "
+        
+        # Copy files
+        rsync -avz -e 'ssh -o StrictHostKeyChecking=no' ${{ env.LOCAL_PUBLISH_DIR}}/ ${{ env.SSH_USER }}@${{ env.DEPLOY_SERVER }}:${{ env.DEPLOY_PATH }}/
+        
+    - name: Start Application
+      env:
+        SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+      run: |
+        mkdir -p ~/.ssh
+        echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        
+        ssh -o StrictHostKeyChecking=no ${{ env.SSH_USER }}@${{ env.DEPLOY_SERVER }} "
+          cd ${{ env.DEPLOY_PATH }}
+          nohup dotnet ${{ env.PROJECT_NAME }}.dll --urls \"http://*77.95.577:5000\" > /dev/null 2>&1 &
+        "
+        
+    - name: Cleanup
+      run: rm -rf ${{ env.LOCAL_PUBLISH_DIR }}
