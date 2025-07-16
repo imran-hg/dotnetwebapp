@@ -15,7 +15,7 @@ jobs:
           ref: main
           clean: true
           fetch-depth: 1
-          repository: 'https://github.com/imran-hg/dotnetwebapp.git'
+          repository: '/imran-hg/dotnetwebapp'
           token: '${{ secrets.GITHUB_TOKEN }}'
       - name: Verify repository content
         run: |
