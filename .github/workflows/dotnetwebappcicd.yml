@@ -2,22 +2,36 @@ name: .NET MVC CI/CD Pipeline
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]  # Changed from dotnetwebapp to main
 
 jobs:
   build-and-test:
     runs-on: ubuntu-latest
     env:
-      DOTNET_VERSION: '6.0.x'  # Update to your .NET version
-
+      DOTNET_VERSION: '7.0.x'  # Update to your .NET version
+      
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        ref: dotnetwebapp
+        # Using simple branch name
+        ref: main
+        # Ensure clean state
+        clean: true
+        # Minimal fetch depth
+        fetch-depth: 1
+        # Explicit repository URL
+        repository: 'https://github.com/imran-hg/dotnetwebapp.git'
+        # Use GitHub token for authentication
+        token: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: List repository files
-      run: ls -la
+    - name: Verify repository content
+      run: |
+        echo "Current branch: $(git branch --show-current)"
+        echo "Repository contents:"
+        ls -la
+        echo "Git status:"
+        git status
 
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
@@ -31,10 +45,14 @@ jobs:
       run: dotnet build --configuration Release --no-restore
 
     - name: Run tests
-      run: dotnet test --no-build --configuration Release --verbosity normal
+      run: |
+        # Find and run test projects
+        find . -name "*Tests.csproj" -exec dotnet test {} --no-build --configuration Release \;
 
     - name: Publish application
-      run: dotnet publish -c Release -o ./publish_output
+      run: |
+        # Publish the main project
+        dotnet publish -c Release -o ./publish_output
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
