@@ -14,9 +14,9 @@ jobs:
     - name: Setup SSH
       run: |
         mkdir -p "$HOME/.ssh"
-        chmod 700 "$HOME/.ssh"
+        chmod 400 "$HOME/.ssh"
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/authorized_keys"
-        chmod 400 "$HOME/.ssh/authorized_keys"
+        chmod 600 "$HOME/.ssh/authorized_keys"
         ssh-keyscan -H "${{ secrets.SSH_HOST }}" > "$HOME/.ssh/known_hosts"
 
     - name: Debug SSH setup
