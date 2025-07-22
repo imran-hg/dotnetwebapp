@@ -2,8 +2,7 @@ name: Pull on server
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
   workflow_dispatch:
 
 jobs:
@@ -12,22 +11,38 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Install SSH keys
+    - name: Setup SSH
       run: |
         mkdir -p "$HOME/.ssh"
         chmod 700 "$HOME/.ssh"
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/id_rsa"
         chmod 600 "$HOME/.ssh/id_rsa"
         ssh-keyscan -H "${{ secrets.SSH_HOST }}" > "$HOME/.ssh/known_hosts"
-        chmod 644 "$HOME/.ssh/known_hosts"
 
-    - name: Connect and pull changes
+    - name: Debug SSH setup
       run: |
-        ssh -o StrictHostKeyChecking=yes \
-            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
-            "cd '${{ secrets.WORK_DIR }}' && \
-             git checkout '${{ secrets.MAIN_BRANCH }}' && \
-             git pull --ff-only"
+        ls -la "$HOME/.ssh"
+        ssh-keygen -l -f "$HOME/.ssh/id_rsa"
+        echo "Host verification:"
+        ssh-keygen -F "${{ secrets.SSH_HOST }}" -f "$HOME/.ssh/known_hosts"
 
-    - name: Cleanup SSH keys
+    - name: Test connection
+      run: |
+        ssh -T -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/id_rsa" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
+            echo "SSH connection successful!"
+
+    - name: Pull changes
+      run: |
+        ssh -T -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/id_rsa" \
+            "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
+        cd '${{ secrets.WORK_DIR }}'
+        git checkout '${{ secrets.MAIN_BRANCH }}'
+        git pull --ff-only
+        echo "Pull successful!"
+        EOF
+
+    - name: Cleanup
       run: rm -rf "$HOME/.ssh"
