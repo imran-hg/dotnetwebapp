@@ -14,9 +14,29 @@ jobs:
       # check this thread to understand why its needed:
       # https://stackoverflow.com/a/70447517
       run: |
-        install -m 600 -D /dev/null ~/.ssh/id_rsa
+      # 1. Create SSH directory
+        mkdir -p ~/.ssh
+        chmod 700 ~/.ssh
+      # 2. Create key file
+        touch ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+# 3. Add private key (replace with actual key)
+        cat << 'EOF' > ~/.ssh/id_rsa
+-----BEGIN OPENSSH PRIVATE KEY-----
+b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+NhAAAAAwEAAQAAAYEAt8WYrqJNkC7d8gPxw6e7t7+6i6i6i6i6i6i6i6i6i6i6i6i6i6i6
+... (your actual private key) ...
+-----END OPENSSH PRIVATE KEY-----
+EOF
+
+# 4. Add GitHub to known hosts
+#ssh-keyscan -H github.com >> ~/.ssh/known_hosts
+
+# 5. Verify setup
+ssh -T git@github.com
+        #install -m 600 -D /dev/null ~/.ssh/id_rsa
         echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
+        ssh-keyscan -H github.com ${{ secrets.SSH_HOST }} > ~/.ssh/known_hosts
     - name: connect and pull
       run: ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd ${{ secrets.WORK_DIR }} && git checkout ${{ secrets.MAIN_BRANCH }} && git pull && exit"
     - name: cleanup
