@@ -15,28 +15,28 @@ jobs:
       run: |
         mkdir -p "$HOME/.ssh"
         chmod 700 "$HOME/.ssh"
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/id_rsa"
-        chmod 600 "$HOME/.ssh/id_rsa"
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > "$HOME/.ssh/id_rsa.pub"
+        chmod 600 "$HOME/.ssh/id_rsa.pub"
         ssh-keyscan -H "${{ secrets.SSH_HOST }}" > "$HOME/.ssh/known_hosts"
 
     - name: Debug SSH setup
       run: |
         ls -la "$HOME/.ssh"
-        ssh-keygen -l -f "$HOME/.ssh/id_rsa"
+        ssh-keygen -l -f "$HOME/.ssh/id_rsa.pub"
         echo "Host verification:"
         ssh-keygen -F "${{ secrets.SSH_HOST }}" -f "$HOME/.ssh/known_hosts"
 
     - name: Test connection
       run: |
         ssh -T -o StrictHostKeyChecking=yes \
-            -i "$HOME/.ssh/id_rsa" \
+            -i "$HOME/.ssh/id_rsa.pub" \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" \
             echo "SSH connection successful!"
 
     - name: Pull changes
       run: |
         ssh -T -o StrictHostKeyChecking=yes \
-            -i "$HOME/.ssh/id_rsa" \
+            -i "$HOME/.ssh/id_rsa.pub" \
             "${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}" << 'EOF'
         cd '${{ secrets.WORK_DIR }}'
         git checkout '${{ secrets.MAIN_BRANCH }}'
